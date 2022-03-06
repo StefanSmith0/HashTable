@@ -1,56 +1,62 @@
 #include <iostream>
 #include <cstring>
+#include <vector>
 #include "Node.h"
 #include "names.h"
 
 using namespace std;
 
 Node* newNode(int nodeNum, Names* names);
-void printList(Node* current);
-void add(Node* newNode, Node* (&table)[]);
+void print(Node* (&table)[], vector<int> &keyList);
+void add(Node* newNode, Node* (&table)[], vector<int> &keyList);
 long hash(char *str);
 
 int main() {
   Names* names = new Names();
   Node* head;
   Node* table[101] = {nullptr};
+  vector<int> keyList;
   for(int i = 0; i < 4; i++) {
-    add(newNode(i, names), table);
+    add(newNode(i, names), table, keyList);
   }
-  //  printList(head);
+  print(table, keyList);
   delete names;
   return 0;
 }
 
-void printList(Node* current) {
-  if(current == nullptr) {
-    return;
-  }
-  cout << endl;
-  cout << "First name: " << current->getFirst() << endl;
-  cout << "Last name: " << " " << current->getLast() << endl;
-  cout << "ID: " << current->getid() << endl;
-  cout << "GPA: " << current->getgpa() << endl;
-  if(current->getNext() != NULL) {
-    printList(current->getNext());
+void print(Node* (&table)[], vector<int> &keyList) {
+  Node* current;
+  Node* next;
+  for(int i = 0; i < keyList.size(); i++) {
+    current = table[keyList[i]];
+    next = current->getNext();
+    cout << i << ": " << current->getFirst() << endl;
+    while(next != nullptr) {
+      i++;
+      cout << i << ": " << next->getFirst() << endl;
+      current = next;
+      next = current->getNext();
+    }
   }
 }
 
-void add(Node* newNode, Node* (&table)[]) {
-  long key = ::hash(newNode->getFirst()) % 101;
+void add(Node* newNode, Node* (&table)[], vector<int> &keyList) {
+  int key = ::hash(newNode->getFirst()) % 101;
+  keyList.push_back(key);
   if(table[key] == nullptr) {
     table[key] = newNode;
   }
   else {
     cout << "Collision, adding to linked list..." << endl;
     Node* current = table[key];
-    while(current->getNext() != NULL) {
-      current = current->getNext();
+    Node* next = current->getNext();
+    while(next != nullptr) {
+      current = next;
+      next = current->getNext();
     }
     current->setNext(newNode);
   }
-  cout << "Student: " << newNode->getFirst();
-  cout << " " << newNode->getLast() << endl;
+  cout << "Student: " << newNode->getFirst() << endl;
   cout << " pushed to: " << key << endl;
 }
 
