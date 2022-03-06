@@ -37,6 +37,7 @@ void Names::fillArray(int size, string (&namesArray)[], fstream &file) {
     for(int i = 0; i < size; i++) {
       string newName;
       getline(file, newName);
+      newName.pop_back();
       namesArray[i] = newName;
     }
   }
