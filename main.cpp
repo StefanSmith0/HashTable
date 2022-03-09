@@ -19,32 +19,86 @@ using namespace std;
 
 Node* newNode(int nodeNum, Names* names);
 void print(Node* (&table)[], vector<int> &keyList);
-void add(Node* newNode, Node* (&table)[], vector<int> &keyList);
-void deleteNode(char* deleteName, Node* (&table)[], vector<int> &keyList);
+void add(Node* newNode, Node* (&table)[], vector<int> &keyList, int tableSize);
+void deleteNode(char* deleteName, Node* (&table)[], vector<int> &keyList, int tableSize);
 long hash(char *str);
 float roundto2(float value);
+void deleteTable(Node* (&table)[], vector<int> &keyList);
+//void rehash(Node* (&nottable)[], Node* (&(*table))[], vector<int> &keyList, int newSize);
 
 int main() {
+  int tableSize = 101;
   Names* names = new Names();
-  Node* table[101] = {nullptr};
+  Node* nottable[tableSize] = {nullptr};
+  Node* (*table)[tableSize] = &nottable;
   vector<int> keyList;
   char input[30];
-  for(int i = 0; i < 4; i++) {
-    add(newNode(i, names), table, keyList);
+  bool running = true;
+  for(int i = 0; i < 12; i++) { //make random students
+    add(newNode(i, names), *table, keyList, tableSize);
   }
-  Node* test = new Node();
-  print(table, keyList);
-  cout << "Pick a child: ";
-  cin.getline(input, 30);
-  deleteNode(input, table, keyList);
+  while(running) {
+    cout << "Command: ";
+    cin.getline(input, 30);
+    if(!strcmp(input, "quit")) {
+      running = false;
+    }
+    else if(!strcmp(input, "delete")) {
+      cout << "Student to delete: ";
+      cin.getline(input, 30);
+      deleteNode(input, *table, keyList, tableSize); 
+    }
+    else if(!strcmp(input, "print")) {
+      print(*table, keyList);
+    }
+    else if(!strcmp(input, "add")) {
+      cout << "Add not developed." << endl;
+    }
+  }
+  deleteTable(*table, keyList);
   delete names;
   return 0;
 }
+/*
+Node* rehash(Node* (&nottable)[], Node* (*table)[], vector<int> &keyList, int newSize) {
+  Node* current;
+  Node* newTable[newSize];
+  table = &newTable;
+  for(int i = 0; i < keyList.size(); i++) {
+    current = table[keyList[i]];
+    if(current != nullptr) {
+      
+    }
+  }
+  }*/
 
-//Delete a Node by name
-void deleteNode(char* deleteName, Node* (&table)[], vector<int> &keyList) {
-  int deleteKey = ::hash(deleteName) % 101;
-  bool success = false;
+//Deletes all Nodes in table.
+void deleteTable(Node* (&table)[], vector<int> &keyList) {
+  Node* current;
+  for(int i = 0; i < keyList.size(); i++) {
+    current = table[keyList[i]];
+    if(current == nullptr) {
+      return;
+    }
+    else if(current->getNext() == nullptr) {
+      delete current;
+      table[keyList[i]] == nullptr;
+    }
+    else {
+      Node* next;
+      while(current != nullptr) {
+	next = current->getNext();
+	delete current;
+	current = next;
+      }
+      table[keyList[i]] == nullptr;
+    }
+  }
+}
+
+//Delete a Node by name - this sometimes screws things up
+void deleteNode(char* deleteName, Node* (&table)[], vector<int> &keyList, int tableSize) {
+  int deleteKey = ::hash(deleteName) % tableSize;
   if(table[deleteKey] == nullptr) { //No element with input name
     cout << "No student with name: " << deleteName << endl;
   }
@@ -52,29 +106,40 @@ void deleteNode(char* deleteName, Node* (&table)[], vector<int> &keyList) {
     delete table[deleteKey];
     table[deleteKey] = nullptr;
     cout << "Student deleted" << endl;
-    success = true;
-  }
-  else { //Element found, elements in linkedlist
-    Node* current = table[deleteKey]->getNext();
-    Node* next = current->getNext();
-    Node* prev = table[deleteKey];
-    while(::hash(current->getFirst()) != ::hash(deleteName)) { //Go through linkedlist until hashes match
-      if(next == nullptr) { //End of list check
-	cout << "An element was found, but the student was not in the linkedlist" << endl;
+    for(int i = 0; i < keyList.size(); i++) { //Node deleted, remove from keyList
+      if(keyList[i] == deleteKey) {
+	keyList.erase(keyList.begin() + i);
+	cout << "Keylist pos: " << i << " deleted." << endl;
 	return;
       }
-      current = next;
-      next = current->getNext();
     }
-    prev->setNext(next);
+  }
+  else { //Element found, elements in linkedlist
+    cout << "Multiple students found with first name: " << deleteName << endl;
+    cout << "Last name: ";
+    char deleteLast[30];
+    cin.getline(deleteLast, 30);
+    Node* current = table[deleteKey];
+    Node* prev = nullptr;
+    while(::hash(current->getLast()) != ::hash(deleteLast)) { //Go through linkedlist until hashes match
+      if(current == nullptr) {
+	cout << "No student named: " << deleteName << " " << deleteLast << endl;
+	return;
+      }
+      prev = current;
+      current = current->getNext();
+    }
+    if(prev == nullptr) {
+      table[deleteKey] = current->getNext();
+    }
+    else {
+      prev->setNext(current->getNext());
+    }
     delete current;
     cout << "Student deleted" << endl;
-    success = true;
-  }
-  if(success) {
     for(int i = 0; i < keyList.size(); i++) { //If node deleted, remove from keyList
       if(keyList[i] == deleteKey) {
-	keyList.erase(keyList.begin() + (i - 1));
+	keyList.erase(keyList.begin() + i);
       }
     }
   }
@@ -107,21 +172,17 @@ float roundto2(float value) {
 }
 
 //Adds a Node to the hash table
-void add(Node* newNode, Node* (&table)[], vector<int> &keyList) {
-  int key = ::hash(newNode->getFirst()) % 101;
+void add(Node* newNode, Node* (&table)[], vector<int> &keyList, int tableSize) {
+  int key = ::hash(newNode->getFirst()) % tableSize;
   keyList.push_back(key);
   if(table[key] == nullptr) {
     table[key] = newNode;
   }
   else {
     cout << "Collision, adding to linked list..." << endl;
-    Node* current = table[key];
-    Node* next = current->getNext();
-    while(next != nullptr) {
-      current = next;
-      next = current->getNext();
-    }
-    current->setNext(newNode);
+    Node* top = table[key];
+    newNode->setNext(top->getNext());
+    top->setNext(newNode);
   }
   cout << "Student: " << newNode->getFirst() << endl;
   cout << " pushed to: " << key << endl;
