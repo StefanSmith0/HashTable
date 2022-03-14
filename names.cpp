@@ -1,5 +1,6 @@
 #include "names.h"
 #include <cstring>
+#include <string>
 #include <fstream>
 #include <time.h>
 
@@ -23,12 +24,20 @@ Names::~Names() {
 
 void Names::randFirst(char* input) {
   int randIndex = rand() % 100;
+  while(empty(firstNames[randIndex])) { 
+    randIndex = rand() % 100;
+  }
   strcpy(input, firstNames[randIndex].c_str());
+  firstNames[randIndex].clear();
 }
 
 void Names::randLast(char* input) {
   int randIndex = rand() % 100;
+  while(empty(lastNames[randIndex])) { 
+    randIndex = rand() % 100;
+  }
   strcpy(input, lastNames[randIndex].c_str());
+  lastNames[randIndex].clear();
 }
 
 void Names::fillArray(int size, string (&namesArray)[], fstream &file) {

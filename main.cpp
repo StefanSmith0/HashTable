@@ -3,6 +3,12 @@
   3/13/2022
   Hash Table
 
+  Commands:
+  add - Adds a student to the list.
+  delete - Removes a student from the list.
+  print - Prints list to console.
+  quit - Ends the program and deletes the list.
+
   Citations:
   - Anxious Alligator - https://www.codegrepper.com/profile/anxious-alligator-bx1nkddr8shy
   - John Dibling - https://stackoverflow.com/users/241536/john-dibling
@@ -18,26 +24,39 @@
 using namespace std;
 
 Node* newNode(int nodeNum, Names* names);
-void print(Node* (&table)[], vector<int> &keyList);
-void add(Node* newNode, Node* (&table)[], vector<int> &keyList, int tableSize);
-void deleteNode(char* deleteName, Node* (&table)[], vector<int> &keyList, int tableSize);
+void print(Node** table, vector<int> &keyList);
+void add(Node* newNode, Node** table, vector<int> &keyList, int tableSize, int &collisions);
+void deleteNode(char* deleteName, Node** table, vector<int> &keyList, int tableSize);
 long hash(char *str);
 float roundto2(float value);
-void deleteTable(Node* (&table)[], vector<int> &keyList);
-//void rehash(Node* (&nottable)[], Node* (&(*table))[], vector<int> &keyList, int newSize);
+void deleteTable(Node** table, vector<int> &keyList);
+Node** rehash(Node** table, vector<int> &keyList, int newSize);
 
 int main() {
-  int tableSize = 101;
+  int tableSize = 51;
   Names* names = new Names();
-  Node* nottable[tableSize] = {nullptr};
-  Node* (*table)[tableSize] = &nottable;
+  Node** table = new Node*[tableSize];
+  for(int i = 0; i < tableSize; i++) {
+    table[i] = nullptr;
+  }
   vector<int> keyList;
   char input[30];
   bool running = true;
+  int initialStudents = 5;
+  int collisions = 0;
+  cout << "Adding " << initialStudents << " random students to table." << endl;
   for(int i = 0; i < 12; i++) { //make random students
-    add(newNode(i, names), *table, keyList, tableSize);
+    add(newNode(i, names), table, keyList, tableSize, collisions);
+    cout << collisions << " collisions" << endl;
   }
   while(running) {
+    if(collisions >= 3) {
+      cout << "More than three collisions, rehashing..." << endl;
+      int newSize = ((tableSize - 1) * 2) + 1;
+      table = rehash(table, keyList, newSize);
+      tableSize = newSize;
+      collisions = 0;
+    }
     cout << "Command: ";
     cin.getline(input, 30);
     if(!strcmp(input, "quit")) {
@@ -46,76 +65,104 @@ int main() {
     else if(!strcmp(input, "delete")) {
       cout << "Student to delete: ";
       cin.getline(input, 30);
-      deleteNode(input, *table, keyList, tableSize); 
+      deleteNode(input, table, keyList, tableSize);
     }
     else if(!strcmp(input, "print")) {
-      print(*table, keyList);
+      print(table, keyList);
     }
     else if(!strcmp(input, "add")) {
-      cout << "Add not developed." << endl;
+      Node* newNode = new Node();
+      int newid = 0;
+      float newgpa = 0;
+      cout << "First name: ";
+      cin.getline(input, 30);
+      newNode->setFirst(input);
+      cout << "Last name: ";
+      cin.getline(input, 30);
+      newNode->setLast(input);
+      cout << "ID: ";
+      cin >> newid;
+      newNode->setid(newid);
+      cout << "GPA: ";
+      cin >> newgpa;
+      newNode->setgpa(newgpa);
+      add(newNode, table, keyList, tableSize, collisions);
+      cin.ignore(1000, '\n');
     }
   }
-  deleteTable(*table, keyList);
+  deleteTable(table, keyList);
   delete names;
   return 0;
 }
-/*
-Node* rehash(Node* (&nottable)[], Node* (*table)[], vector<int> &keyList, int newSize) {
+
+//Rehashes table into larger one.
+Node** rehash(Node** table, vector<int> &keyList, int newSize) {
   Node* current;
-  Node* newTable[newSize];
-  table = &newTable;
+  int newKey = 0;
+  Node** newTable = new Node*[newSize];
+  for(int i = 0; i < newSize; i++) { //Initializing new array
+    newTable[i] = nullptr;
+  }
+  for(int i = 0; i < keyList.size(); i++) {
+    current = table[keyList[i]];
+    table[keyList[i]] = table[keyList[i]]->getNext();
+    newKey = ::hash(current->getFirst()) % newSize;
+    if(newTable[newKey] == nullptr) {
+      current->setNext(nullptr);
+      newTable[newKey] = current;
+    }
+    else {
+      current->setNext(newTable[newKey]->getNext());
+      newTable[newKey]->setNext(current);
+    }
+    keyList[i] = newKey;
+  }
+  cout << "Table resized to " << newSize << " students." << endl;
+  return newTable;
+}
+
+//Deletes all Nodes in table.
+void deleteTable(Node** table, vector<int> &keyList) {
+  Node* current;
   for(int i = 0; i < keyList.size(); i++) {
     current = table[keyList[i]];
     if(current != nullptr) {
-      
-    }
-  }
-  }*/
-
-//Deletes all Nodes in table.
-void deleteTable(Node* (&table)[], vector<int> &keyList) {
-  Node* current;
-  for(int i = 0; i < keyList.size(); i++) {
-    current = table[keyList[i]];
-    if(current == nullptr) {
-      return;
-    }
-    else if(current->getNext() == nullptr) {
-      delete current;
-      table[keyList[i]] == nullptr;
-    }
-    else {
-      Node* next;
-      while(current != nullptr) {
-	next = current->getNext();
+      if(current->getNext() == nullptr) {
 	delete current;
-	current = next;
+	table[keyList[i]] == nullptr;
       }
-      table[keyList[i]] == nullptr;
+      else {
+	Node* next;
+	while(current != nullptr) {
+	  next = current->getNext();
+	  delete current;
+	  current = next;
+	}
+	table[keyList[i]] = nullptr;
+      }
     }
   }
 }
 
-//Delete a Node by name - this sometimes screws things up
-void deleteNode(char* deleteName, Node* (&table)[], vector<int> &keyList, int tableSize) {
+//Delete a Node by name
+void deleteNode(char* deleteName, Node** table, vector<int> &keyList, int tableSize) {
   int deleteKey = ::hash(deleteName) % tableSize;
   if(table[deleteKey] == nullptr) { //No element with input name
-    cout << "No student with name: " << deleteName << endl;
+    cout << "Couldn't find student named: " << deleteName << endl;
   }
   else if(table[deleteKey]->getNext() == nullptr) { //Element found, no elements in linkedlist
     delete table[deleteKey];
     table[deleteKey] = nullptr;
-    cout << "Student deleted" << endl;
+    cout << "Student deleted." << endl;
     for(int i = 0; i < keyList.size(); i++) { //Node deleted, remove from keyList
       if(keyList[i] == deleteKey) {
 	keyList.erase(keyList.begin() + i);
-	cout << "Keylist pos: " << i << " deleted." << endl;
 	return;
       }
     }
   }
   else { //Element found, elements in linkedlist
-    cout << "Multiple students found with first name: " << deleteName << endl;
+    cout << "Multiple candidates for name: " << deleteName << endl;
     cout << "Last name: ";
     char deleteLast[30];
     cin.getline(deleteLast, 30);
@@ -123,7 +170,7 @@ void deleteNode(char* deleteName, Node* (&table)[], vector<int> &keyList, int ta
     Node* prev = nullptr;
     while(::hash(current->getLast()) != ::hash(deleteLast)) { //Go through linkedlist until hashes match
       if(current == nullptr) {
-	cout << "No student named: " << deleteName << " " << deleteLast << endl;
+	cout << "Couldn't find student named: " << deleteName << " " << deleteLast << endl;
 	return;
       }
       prev = current;
@@ -136,7 +183,7 @@ void deleteNode(char* deleteName, Node* (&table)[], vector<int> &keyList, int ta
       prev->setNext(current->getNext());
     }
     delete current;
-    cout << "Student deleted" << endl;
+    cout << "Student deleted." << endl;
     for(int i = 0; i < keyList.size(); i++) { //If node deleted, remove from keyList
       if(keyList[i] == deleteKey) {
 	keyList.erase(keyList.begin() + i);
@@ -145,17 +192,18 @@ void deleteNode(char* deleteName, Node* (&table)[], vector<int> &keyList, int ta
   }
 }
 
-void print(Node* (&table)[], vector<int> &keyList) {
+//Prints table from keyList
+void print(Node** table, vector<int> &keyList) {
   Node* current;
   Node* next;
   for(int i = 0; i < keyList.size(); i++) { //Print through hash table
     current = table[keyList[i]];
     next = current->getNext();
+    cout << "Position: " << keyList[i] << endl;
     cout << "Student: " << current->getFirst() << " " << current->getLast() << endl;
     cout << "ID: " << current->getid() << endl;
     cout << "GPA: " << current->getgpa() << endl;
     while(next != nullptr) { //Print through linked list
-      i++;
       cout << "Student: " << next->getFirst() << " " << next->getLast() << endl;
       cout << "ID: " << next->getid() << endl;
       cout << "GPA: " << next->getgpa() << endl;
@@ -172,24 +220,22 @@ float roundto2(float value) {
 }
 
 //Adds a Node to the hash table
-void add(Node* newNode, Node* (&table)[], vector<int> &keyList, int tableSize) {
+void add(Node* newNode, Node** table, vector<int> &keyList, int tableSize, int &collisions) {
   int key = ::hash(newNode->getFirst()) % tableSize;
   keyList.push_back(key);
   if(table[key] == nullptr) {
     table[key] = newNode;
   }
   else {
-    cout << "Collision, adding to linked list..." << endl;
     Node* top = table[key];
     newNode->setNext(top->getNext());
     top->setNext(newNode);
+    collisions++;
   }
-  cout << "Student: " << newNode->getFirst() << endl;
-  cout << " pushed to: " << key << endl;
 }
 
 //Makes a new Node with random values
-Node* newNode(int id, Names* names) { 
+Node* newNode(int id, Names* names) {
   char firstName[30];
   names->randFirst(firstName);
   char lastName[30];
@@ -209,7 +255,11 @@ long hash(char *str) { //djb2 by Dan Bernstein
   long hash = 5381;
   int c;
   while (c = *str++) {
-    hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+    hash = ((hash << 5) + hash) + c; // hash * 33 + c 
+  }
+  if(hash < 0) {
+    hash = hash * -1;
   }
   return hash;
 }
+

@@ -8,7 +8,6 @@ Node::Node() {
 }
 
 Node::~Node() {
-  cout << "Node destroyed" << endl;
 }
 
 char* Node::getFirst() {
